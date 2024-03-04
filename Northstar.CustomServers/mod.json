@@ -125,6 +125,62 @@
 		{
 			"Name": "ns_reaper_warpfall_kill",
 			"DefaultValue": "1"
+		},
+		{
+			"Name": "ns_fd_money_soldier",
+			"DefaultValue": "5"
+		},
+		{
+			"Name": "ns_fd_money_drone",
+			"DefaultValue": "10"
+		},
+		{
+			"Name": "ns_fd_money_spectre",
+			"DefaultValue": "10"
+		},
+		{
+			"Name": "ns_fd_money_stalker",
+			"DefaultValue": "15"
+		},
+		{
+			"Name": "ns_fd_money_super_spectre",
+			"DefaultValue": "20"
+		},
+		{
+			"Name": "ns_fd_allow_elite_titans_drop_batteries",
+			"DefaultValue": "1"
+		},
+		{
+			"Name": "ns_fd_add_elite_ion_health",
+			"DefaultValue": "7500"
+		},
+		{
+			"Name": "ns_fd_add_elite_scorch_health",
+			"DefaultValue": "7500"
+		},
+		{
+			"Name": "ns_fd_add_elite_ronin_health",
+			"DefaultValue": "7500"
+		},
+		{
+			"Name": "ns_fd_add_elite_tone_health",
+			"DefaultValue": "7500"
+		},
+		{
+			"Name": "ns_fd_add_elite_legion_health",
+			"DefaultValue": "15000"
+		},
+		{
+			"Name": "ns_fd_add_elite_monarch_health",
+			"DefaultValue": "7500"
+		},
+		{
+			"Name": "ns_fd_add_elite_northstar_health",
+			"DefaultValue": "7500"
+		},
+		{
+			"Name": "ns_fd_add_elite_sniper_tone_health",
+			"DefaultValue": "7500"
 		}
 	],
 	"Scripts": [
