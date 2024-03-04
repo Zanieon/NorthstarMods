@@ -310,21 +310,6 @@ void function GamemodeFD_Init()
 	elite_monarch_health = getValidValue("ns_fd_add_elite_monarch_health", 7500)
 	elite_northstar_health = getValidValue("ns_fd_add_elite_northstar_health", 7500)
 	elite_sniper_tone_health = getValidValue("ns_fd_add_elite_sniper_tone_health", 7500)
-
-	print("Soldier Money: " + soldier_money)
-	print("Drone Money: " + drone_money)
-	print("Spectre Money: " + spectre_money)
-	print("Stalker Money: " + stalker_money)
-	print("Super Spectre Money: " + super_spectre_money)
-	print("Should Elite Titan drop batteries: " + GetConVarBool("ns_fd_allow_elite_titans_drop_batteries"))
-	print("Elite Ion Health: " + elite_ion_health)
-	print("Elite Scorch Health: " + elite_scorch_health)
-	print("Elite Ronin Health: " + elite_ronin_health)
-	print("Elite Tone Health: " + elite_tone_health)
-	print("Elite Legion Health: " + elite_legion_health)
-	print("Elite Monarch Health: " + elite_monarch_health)
-	print("Elite Northstar Health: " + elite_northstar_health)
-	print("Elite Sniper Tone Health: " + elite_sniper_tone_health)
 }
 
 int function getValidValue(string conVarName, int defaultValue) {
