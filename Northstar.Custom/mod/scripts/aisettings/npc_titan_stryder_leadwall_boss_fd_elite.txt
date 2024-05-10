@@ -22,7 +22,7 @@ npc_titan_stryder_leadwall_boss_fd_elite
 	meleeInterval					1
 	meleeChargeInterval				1
 	meleeChargeSprintDist			800
-	meleeMaxCombo					8
+	meleeMaxCombo					3
 	chaseOnlyReachable				1
 	MeleeRange						325
 	MeleeChargeRange				400

@@ -28,7 +28,7 @@ npc_titan_atlas_vanguard_boss_fd_elite
 	meleeInterval					1
 	meleeChargeInterval				1
 	meleeChargeSprintDist			800
-	meleeMaxCombo					4
+	meleeMaxCombo					3
 	chaseOnlyReachable				1
 	chaseStopDist					2000
    	chaseStopDistHeavyArmor			400
