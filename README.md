@@ -1,4 +1,4 @@
-# Experimental Frontier Defense
+# Experimental Frontier Defense (nerfed Elites)
 
 Branch made to expand Frontier Defense feature set by adding back cut content while respecting the vanilla defaults of the game.
 
@@ -40,7 +40,14 @@ Branch made to expand Frontier Defense feature set by adding back cut content wh
 - They can use e-smoke to kill pilots trying to rodeo them
 - Drop a Battery on Easy and Regular Difficulties or drop an Amped Battery in Hard, Master and Insane difficulties similar to campaign Titans
 
-*Warning: Elite Titans' melee have a special mechanic called ENF (Execution Next Frame), in which said Elite Titan will immediately chain execution the first frame the game registers a titan as doomed (auto or player) from the melee attack that has doomed them! This mechanic respects Stealth Auto-Eject and Ronin's Phase Reflex, and will not trigger immediate execution.*
+~~*Warning: Elite Titans' melee have a special mechanic called ENF (Execution Next Frame), in which said Elite Titan will immediately chain execution the first frame the game registers a titan as doomed (auto or player) from the melee attack that has doomed them! This mechanic respects Stealth Auto-Eject and Ronin's Phase Reflex, and will not trigger immediate execution.~~*
+
+## Nerfed Elites branch changes
+- Removed ENF (Execution Next Frame)
+- Removed Shield regen on core (except for monarch)
+- Nerfed melee damage
+- Slightly reduce weapon ccuracy
+
 
 ## Live-Fire Frontier Defense
 
