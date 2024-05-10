@@ -139,8 +139,6 @@ void function MonitorEliteTitanCore( entity npc )
 		npc.WaitSignal( "CoreBegin" )
 		wait 0.1
 
-		soul.SetShieldHealth( soul.GetShieldHealthMax() / 2 )
-
 		entity meleeWeapon = npc.GetMeleeWeapon()
 		if( meleeWeapon.HasMod( "super_charged" ) || meleeWeapon.HasMod( "super_charged_SP" ) ) //Hack for Elite Ronin
 			npc.SetAISettings( "npc_titan_stryder_leadwall_shift_core_elite" )
