@@ -43,10 +43,11 @@ Branch made to expand Frontier Defense feature set by adding back cut content wh
 ~~*Warning: Elite Titans' melee have a special mechanic called ENF (Execution Next Frame), in which said Elite Titan will immediately chain execution the first frame the game registers a titan as doomed (auto or player) from the melee attack that has doomed them! This mechanic respects Stealth Auto-Eject and Ronin's Phase Reflex, and will not trigger immediate execution.~~*
 
 ## Nerfed Elites branch changes
+
 - Removed ENF (Execution Next Frame)
 - Removed Shield regen on core (except for monarch)
 - Nerfed melee damage
-- Slightly reduce weapon ccuracy
+- Slightly reduced weapon ccuracy
 
 
 ## Live-Fire Frontier Defense
