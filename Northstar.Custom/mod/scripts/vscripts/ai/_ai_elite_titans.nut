@@ -55,7 +55,6 @@ void function EliteTitanExecutionCheck( entity ent, var damageInfo )
 		{
 			if( CodeCallback_IsValidMeleeExecutionTarget( attacker, ent ) && !GetDoomedState( attacker ) ) //Doomed Elites cannot execute
 			{
-				//If the player is already doomed, then just execute, if the next melee damage brings it to Doom state, wait to execute
 				if( GetDoomedState( ent ) && ( !SoulHasPassive( soul, ePassives.PAS_RONIN_AUTOSHIFT ) || !SoulHasPassive( soul, ePassives.PAS_AUTO_EJECT ) || !ent.IsPhaseShifted() ) )
 				{
 					thread PlayerTriesSyncedMelee( attacker, ent )
@@ -96,7 +95,7 @@ void function SetEliteTitanPostSpawn( entity npc )
 		npc.DisableNPCMoveFlag( NPCMF_WALK_NONCOMBAT )
 		npc.SetCapabilityFlag( bits_CAP_NO_HIT_SQUADMATES, false )
 		npc.SetDefaultSchedule( "SCHED_COMBAT_WALK" )
-		npc.kv.AccuracyMultiplier = 5.0
+		npc.kv.AccuracyMultiplier = 3.0
 		npc.kv.WeaponProficiency = eWeaponProficiency.PERFECT
 		npc.SetTargetInfoIcon( GetTitanCoreIcon( GetTitanCharacterName( npc ) ) )
 		npc.AssaultSetFightRadius( 2000 )
@@ -111,7 +110,7 @@ void function SetEliteTitanPostSpawn( entity npc )
 		if( IsValid( soul ) )
 		{
 			soul.SetPreventCrits( true )
-			soul.SetShieldHealthMax( 8000 )
+			soul.SetShieldHealthMax( 5000 )
 			soul.SetShieldHealth( soul.GetShieldHealthMax() )
 		}
 
