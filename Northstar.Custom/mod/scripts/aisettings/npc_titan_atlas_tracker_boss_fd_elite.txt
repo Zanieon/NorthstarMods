@@ -19,9 +19,9 @@ npc_titan_atlas_tracker_boss_fd_elite
 	lightPainMinInterval			30
 	heavyPainMinInterval			60
 	
-	meleeInterval					1
-	meleeChargeInterval				1
-	meleeMaxCombo					3
+	meleeInterval					3
+	meleeChargeInterval				3
+	meleeMaxCombo					2
 	chaseOnlyReachable				1
 	
 	reactChanceDefault				100
