@@ -25,10 +25,10 @@ npc_titan_atlas_vanguard_boss_fd_elite
 	MeleeDamageMinHeavyArmor		1125
 	MeleeDamageMaxHeavyArmor		1125
 	
-	meleeInterval					1
-	meleeChargeInterval				1
 	meleeChargeSprintDist			800
-	meleeMaxCombo					4
+	meleeInterval					3
+	meleeChargeInterval				3
+	meleeMaxCombo					2
 	chaseOnlyReachable				1
 	chaseStopDist					2000
    	chaseStopDistHeavyArmor			400

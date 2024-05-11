@@ -9,8 +9,8 @@ global function EliteTitans_Init
 /*
 ███████╗██╗     ██╗████████╗███████╗    ████████╗██╗████████╗ █████╗ ███╗   ██╗███████╗    ██╗      ██████╗  ██████╗ ██╗ ██████╗
 ██╔════╝██║     ██║╚══██╔══╝██╔════╝    ╚══██╔══╝██║╚══██╔══╝██╔══██╗████╗  ██║██╔════╝    ██║     ██╔═══██╗██╔════╝ ██║██╔════╝
-█████╗  ██║     ██║   ██║   █████╗         ██║   ██║   ██║   ███████║██╔██╗ ██║███████╗    ██║     ██║   ██║██║  ███╗██║██║     
-██╔══╝  ██║     ██║   ██║   ██╔══╝         ██║   ██║   ██║   ██╔══██║██║╚██╗██║╚════██║    ██║     ██║   ██║██║   ██║██║██║     
+█████╗  ██║     ██║   ██║   █████╗         ██║   ██║   ██║   ███████║██╔██╗ ██║███████╗    ██║     ██║   ██║██║  ███╗██║██║
+██╔══╝  ██║     ██║   ██║   ██╔══╝         ██║   ██║   ██║   ██╔══██║██║╚██╗██║╚════██║    ██║     ██║   ██║██║   ██║██║██║
 ███████╗███████╗██║   ██║   ███████╗       ██║   ██║   ██║   ██║  ██║██║ ╚████║███████║    ███████╗╚██████╔╝╚██████╔╝██║╚██████╗
 ╚══════╝╚══════╝╚═╝   ╚═╝   ╚══════╝       ╚═╝   ╚═╝   ╚═╝   ╚═╝  ╚═╝╚═╝  ╚═══╝╚══════╝    ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝ ╚═════╝
 
@@ -47,7 +47,7 @@ void function EliteTitanExecutionCheck( entity ent, var damageInfo )
 
 	if ( !IsAlive( ent ) || !attacker || ent.GetTeam() == attacker.GetTeam() || attacker == ent || !ent.IsTitan() )
 		return
-	
+
 	entity soul = ent.GetTitanSoul()
 	if( attacker.IsNPC() && attacker.IsTitan() )
 	{
@@ -55,39 +55,12 @@ void function EliteTitanExecutionCheck( entity ent, var damageInfo )
 		{
 			if( CodeCallback_IsValidMeleeExecutionTarget( attacker, ent ) && !GetDoomedState( attacker ) ) //Doomed Elites cannot execute
 			{
-				//If the player is already doomed, then just execute, if the next melee damage brings it to Doom state, wait to execute
 				if( GetDoomedState( ent ) && ( !SoulHasPassive( soul, ePassives.PAS_RONIN_AUTOSHIFT ) || !SoulHasPassive( soul, ePassives.PAS_AUTO_EJECT ) || !ent.IsPhaseShifted() ) )
 				{
 					thread PlayerTriesSyncedMelee( attacker, ent )
 					ent.SetNoTarget( true ) //Prevents other nearby AI Titans from Moshing the victim
 				}
-				else
-					thread EliteExecutionDelayed( attacker, ent ) //Execute in next frame
 			}
-		}
-	}
-}
-
-void function EliteExecutionDelayed( entity attacker, entity ent )
-{
-	Assert( IsValid( attacker ) && attacker.IsTitan(), "Executioner is not an Elite Titan: " + attacker )
-	attacker.EndSignal( "OnDestroy" )
-	attacker.EndSignal( "OnDeath" )
-	
-	Assert( IsValid( ent ) && ent.IsTitan(), "Victim is not a Titan: " + ent )
-	entity soul = ent.GetTitanSoul()
-	
-	soul.EndSignal( "OnDestroy" )
-	soul.EndSignal( "OnDeath" )
-	
-	wait 0.1
-	
-	if( CodeCallback_IsValidMeleeExecutionTarget( attacker, ent ) && ent.IsTitan() && IsValid( soul ) && !GetDoomedState( attacker ) )
-	{
-		if( GetDoomedState( ent ) && ( !SoulHasPassive( soul, ePassives.PAS_RONIN_AUTOSHIFT ) || !SoulHasPassive( soul, ePassives.PAS_AUTO_EJECT ) || !ent.IsPhaseShifted() ) )
-		{
-			thread PlayerTriesSyncedMelee( attacker, ent )
-			ent.SetNoTarget( true ) //Again, no Moshing against the victim
 		}
 	}
 }
@@ -96,7 +69,7 @@ void function SetTitanAsElite( entity npc )
 {
 	if( GetGameState() != eGameState.Playing )
 		return
-	
+
 	Assert( IsValid( npc ) && npc.IsTitan(), "Entity is not a Titan to set as Elite: " + npc )
 	if ( npc.IsTitan() )
 	{
@@ -112,7 +85,7 @@ void function SetEliteTitanPostSpawn( entity npc )
 {
 	if( GetGameState() != eGameState.Playing )
 		return
-	
+
 	Assert( IsValid( npc ) && npc.IsTitan(), "Entity is not a Titan to set as Elite: " + npc )
 	if ( npc.IsTitan() )
 	{
@@ -122,7 +95,7 @@ void function SetEliteTitanPostSpawn( entity npc )
 		npc.DisableNPCMoveFlag( NPCMF_WALK_NONCOMBAT )
 		npc.SetCapabilityFlag( bits_CAP_NO_HIT_SQUADMATES, false )
 		npc.SetDefaultSchedule( "SCHED_COMBAT_WALK" )
-		npc.kv.AccuracyMultiplier = 5.0
+		npc.kv.AccuracyMultiplier = 3.0
 		npc.kv.WeaponProficiency = eWeaponProficiency.PERFECT
 		npc.SetTargetInfoIcon( GetTitanCoreIcon( GetTitanCharacterName( npc ) ) )
 		npc.AssaultSetFightRadius( 2000 )
@@ -132,15 +105,15 @@ void function SetEliteTitanPostSpawn( entity npc )
 		HideCrit( npc )
 		npc.SetTitle( npc.GetSettingTitle() )
 		ShowName( npc )
-		
+
 		entity soul = npc.GetTitanSoul()
 		if( IsValid( soul ) )
 		{
 			soul.SetPreventCrits( true )
-			soul.SetShieldHealthMax( 8000 )
+			soul.SetShieldHealthMax( 5000 )
 			soul.SetShieldHealth( soul.GetShieldHealthMax() )
 		}
-		
+
 		if( GetTitanCharacterName( npc ) == "vanguard" ) //Monarchs never use their core, but can track their shields to simulate a player-like behavior
 			thread MonitorEliteMonarchShield( npc )
 		else
@@ -154,25 +127,23 @@ void function MonitorEliteTitanCore( entity npc )
 	entity soul = npc.GetTitanSoul()
 	if ( !IsValid( soul ) )
 		return
-	
+
 	soul.EndSignal( "OnDestroy" )
 	soul.EndSignal( "OnDeath" )
-	
+
 	while( true )
 	{
 		SoulTitanCore_SetNextAvailableTime( soul, 1.0 )
-		
+
 		npc.WaitSignal( "CoreBegin" )
 		wait 0.1
-		
-		soul.SetShieldHealth( soul.GetShieldHealthMax() / 2 )
-		
+
 		entity meleeWeapon = npc.GetMeleeWeapon()
 		if( meleeWeapon.HasMod( "super_charged" ) || meleeWeapon.HasMod( "super_charged_SP" ) ) //Hack for Elite Ronin
 			npc.SetAISettings( "npc_titan_stryder_leadwall_shift_core_elite" )
-		
+
 		npc.WaitSignal( "CoreEnd" )
-		
+
 		switch ( difficultyLevel )
 		{
 			case eFDDifficultyLevel.EASY:
@@ -194,22 +165,22 @@ void function MonitorEliteMonarchShield( entity npc )
 	entity soul = npc.GetTitanSoul()
 	if ( !IsValid( soul ) )
 		return
-	
+
 	soul.EndSignal( "OnDestroy" )
 	soul.EndSignal( "OnDeath" )
-	
+
 	float coretime = Time()
-	
+
 	while( true )
 	{
 		while( soul.GetShieldHealth() > soul.GetShieldHealthMax() * 0.1 )
 			WaitFrame()
-		
+
 		while( npc.ContextAction_IsBusy() || npc.ContextAction_IsMeleeExecution() ) //Wait for Arc Traps stuns or other actions
 			WaitFrame()
-		
+
 		wait RandomFloatRange( 1.0, 2.5 )
-		
+
 		if( coretime <= Time() )
 		{
 			entity coreEffect = CreateCoreEffect( npc, $"P_titan_core_atlas_blast" )
@@ -233,13 +204,13 @@ void function MonitorEliteMonarchShield( entity npc )
 void function EliteTitanElectricSmoke( entity titan )
 {
 	Assert( IsValid( titan ) && titan.IsTitan(), "Entity is not a Titan: " + titan )
-	
+
 	entity soul = titan.GetTitanSoul()
 	soul.EndSignal( "OnDestroy" )
 	soul.EndSignal( "OnDeath" )
-	
+
 	wait RandomFloatRange( 1.0, 2.0 )
-	
+
 	if( IsValid( titan ) && IsValid( soul ) && !titan.ContextAction_IsMeleeExecution() )
 	{
 		GiveOffhandElectricSmoke( titan )
@@ -248,7 +219,7 @@ void function EliteTitanElectricSmoke( entity titan )
 		{
 			if( GetTitanCharacterName( titan ) == "vanguard" && !smokeinventory.HasMod( "maelstrom" ) )
 				smokeinventory.AddMod( "maelstrom" )
-			
+
 			EliteTitanSmokescreen( titan, smokeinventory )
 		}
 	}
@@ -258,10 +229,10 @@ void function EliteTitanSmokescreen( entity ent, entity weapon )
 {
 	SmokescreenStruct smokescreen
 	array<entity> primaryWeapons = ent.GetMainWeapons()
-	
+
 	if( !primaryWeapons.len() )
 		return
-		
+
 	entity maingun = primaryWeapons[0]
 	if ( IsValid( maingun ) && maingun.HasMod( "fd_vanguard_utility_1" ) )
 		smokescreen.smokescreenFX = FX_ELECTRIC_SMOKESCREEN_HEAL
@@ -316,7 +287,7 @@ void function EliteTitanSmokescreen( entity ent, entity weapon )
 void function SetTitanWeaponSkin( entity npc, int skinindex = 1, int camoindex = 31 )
 {
 	Assert( IsValid( npc ) && npc.IsTitan(), "Entity is not a Titan: " + npc )
-	
+
 	if ( npc.IsTitan() )
 	{
 		array<entity> primaryWeapons = npc.GetMainWeapons()
