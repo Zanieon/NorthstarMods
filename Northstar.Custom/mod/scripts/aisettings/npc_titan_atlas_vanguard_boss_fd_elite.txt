@@ -20,10 +20,6 @@ npc_titan_atlas_vanguard_boss_fd_elite
 	
 	MeleeRange						280
 	MeleeChargeRange				300
-	MeleeChargeDamageMinHeavyArmor	1125
-	MeleeChargeDamageMaxHeavyArmor	1125
-	MeleeDamageMinHeavyArmor		1125
-	MeleeDamageMaxHeavyArmor		1125
 	
 	meleeChargeSprintDist			800
 	meleeInterval					3
