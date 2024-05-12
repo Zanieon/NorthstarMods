@@ -116,7 +116,7 @@ global array< array<WaveSpawnEvent> > WaveSpawnEvents
 
 const float FD_TITAN_AOE_REACTTIME = 3.0 //This is in seconds
 const int FD_ELITE_TITAN_MIN_HEALTH_CAP = 2500
-const int FD_ELITE_TITAN_MAX_HEALTH_CAP = 7500
+const int FD_ELITE_TITAN_MAX_HEALTH_CAP = 5000
 
 
 
@@ -1456,7 +1456,7 @@ void function SpawnLegionTitan( WaveSpawnEvent ornull spawnEvent )
 		SetEliteTitanPostSpawn( npc )
 		npc.SetMaxHealth( npc.GetMaxHealth() + file.eliteTitanHPBonus_Legion )
 		npc.SetHealth( npc.GetMaxHealth() )
-		npc.kv.AccuracyMultiplier = 1.0 //Ironically lowering their accuracy increases the chance of them hitting the enemy
+		npc.kv.AccuracyMultiplier = 1.5 //Ironically lowering their accuracy increases the chance of them hitting the enemy
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_random_5"
 		
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -1469,7 +1469,6 @@ void function SpawnLegionTitan( WaveSpawnEvent ornull spawnEvent )
 		
 		entity gunshield = npc.GetOffhandWeapon( OFFHAND_SPECIAL )
 		gunshield.AddMod( "npc_more_shield" )
-		gunshield.AddMod( "npc_infinite_shield" )
 		gunshield.AddMod( "fd_gun_shield" )
 		gunshield.AddMod( "fd_gun_shield_redirect" )
 		gunshield.AddMod( "SiegeMode" )
