@@ -2127,7 +2127,7 @@ void function DamageScaleByDifficulty( entity ent, var damageInfo )
 	{
 		if( damageSourceID == eDamageSourceId.auto_titan_melee || DamageInfo_GetCustomDamageType( damageInfo ) & DF_MELEE )
 		{
-			DamageInfo_ScaleDamage( damageInfo, 2.5 )
+			DamageInfo_ScaleDamage( damageInfo, 1.4 )
 			DamageInfo_SetDamageSourceIdentifier( damageInfo, eDamageSourceId.melee_titan_punch ) //Restore obituary messages for Elites because they are piloted by grunts and [Auto-Titan Melee] doesn't make sense due to that
 
 			if( GetTitanCharacterName( attacker ) == "ronin" )
