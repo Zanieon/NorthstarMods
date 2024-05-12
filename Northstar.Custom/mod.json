@@ -32,12 +32,12 @@
 		},
 		{
             "Name": "ns_fd_elite_minimap_icontype",
-            "DefaultValue": "0",
+            "DefaultValue": "2",
 			"Flags": "ARCHIVE_PLAYERPROFILE"
         },
         {
             "Name": "ns_fd_elite_overhead_icontype",
-            "DefaultValue": "1",
+            "DefaultValue": "2",
 			"Flags": "ARCHIVE_PLAYERPROFILE"
         },
 		{
