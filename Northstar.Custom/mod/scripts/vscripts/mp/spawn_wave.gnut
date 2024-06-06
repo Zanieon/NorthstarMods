@@ -103,20 +103,20 @@ struct{
 	bool visibleDropPoints = false
 	bool sprintNukeTitans = false
 	
-	int eliteTitanHPBonus_Ion = 7500
-	int eliteTitanHPBonus_Scorch = 7500
-	int eliteTitanHPBonus_Northstar = 7500
-	int eliteTitanHPBonus_Ronin = 7500
-	int eliteTitanHPBonus_Tone = 7500
-	int eliteTitanHPBonus_Legion = 15000
-	int eliteTitanHPBonus_Monarch = 7500
+	int eliteTitanHPBonus_Ion = 2500
+	int eliteTitanHPBonus_Scorch = 2500
+	int eliteTitanHPBonus_Northstar = 2500
+	int eliteTitanHPBonus_Ronin = 2500
+	int eliteTitanHPBonus_Tone = 2500
+	int eliteTitanHPBonus_Legion = 2500
+	int eliteTitanHPBonus_Monarch = 2500
 }file
 
 global array< array<WaveSpawnEvent> > WaveSpawnEvents
 
 const float FD_TITAN_AOE_REACTTIME = 3.0 //This is in seconds
 const int FD_ELITE_TITAN_MIN_HEALTH_CAP = 2500
-const int FD_ELITE_TITAN_MAX_HEALTH_CAP = 15000
+const int FD_ELITE_TITAN_MAX_HEALTH_CAP = 5000
 
 
 
@@ -1456,7 +1456,7 @@ void function SpawnLegionTitan( WaveSpawnEvent ornull spawnEvent )
 		SetEliteTitanPostSpawn( npc )
 		npc.SetMaxHealth( npc.GetMaxHealth() + file.eliteTitanHPBonus_Legion )
 		npc.SetHealth( npc.GetMaxHealth() )
-		npc.kv.AccuracyMultiplier = 1.0 //Ironically lowering their accuracy increases the chance of them hitting the enemy
+		npc.kv.AccuracyMultiplier = 1.5 //Ironically lowering their accuracy increases the chance of them hitting the enemy
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_random_5"
 		
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -1469,7 +1469,6 @@ void function SpawnLegionTitan( WaveSpawnEvent ornull spawnEvent )
 		
 		entity gunshield = npc.GetOffhandWeapon( OFFHAND_SPECIAL )
 		gunshield.AddMod( "npc_more_shield" )
-		gunshield.AddMod( "npc_infinite_shield" )
 		gunshield.AddMod( "fd_gun_shield" )
 		gunshield.AddMod( "fd_gun_shield_redirect" )
 		gunshield.AddMod( "SiegeMode" )

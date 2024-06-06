@@ -21,10 +21,6 @@ npc_titan_ogre_minigun_boss_fd_elite
 	
 	MeleeRange						280
 	MeleeChargeRange				300
-	MeleeChargeDamageMinHeavyArmor	2500
-	MeleeChargeDamageMaxHeavyArmor	2500
-	MeleeDamageMinHeavyArmor		2500
-	MeleeDamageMaxHeavyArmor		2500
 	MeleeDamageForce				6000000
 	MeleeChargeDamageForce 			5000000
 	
