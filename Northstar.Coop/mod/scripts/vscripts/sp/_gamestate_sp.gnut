@@ -1,0 +1,1117 @@
+const RESPAWN_TRIG_RECHECK_WAIT 		= 1
+const DEFAULT_SP_ARRIVAL_TOLERANCE = 200
+const DEFAULT_SP_ASSAULT_TIMEOUT = 0
+
+// move these to auto precache
+global const TEAM_MIL_GRUNT_MODEL 			= $"models/humans/grunts/mlt_grunt_rifle.mdl"
+global const TEAM_MIL_GRUNT_MODEL_LMG		= $"models/humans/grunts/mlt_grunt_lmg.mdl"
+global const TEAM_MIL_GRUNT_MODEL_RIFLE		= $"models/humans/grunts/mlt_grunt_rifle.mdl"
+global const TEAM_MIL_GRUNT_MODEL_ROCKET 	= $"models/humans/grunts/mlt_grunt_rifle.mdl"
+global const TEAM_MIL_GRUNT_MODEL_SHOTGUN 	= $"models/humans/grunts/mlt_grunt_shotgun.mdl"
+global const TEAM_MIL_GRUNT_MODEL_SMG		= $"models/humans/grunts/mlt_grunt_smg.mdl"
+
+
+global function GamemodeSp_Init
+global function GiveBatteryChargeTool
+global function GiveBatteryChargeToolSingle
+global function HasBatteryChargeTool
+global function FriendlyFire_MissionFailure
+global function DamageAlwaysLethal
+global function ServerRestartMission
+global function DisableFriendlyHighlight
+global function EnableFriendlyHighlight
+global function SP_PlayerLastSlideTime
+global function CreatePetTitanAtOrigin
+global function CreatePetTitanAtOriginWithTf
+global function Coop_TitanSpawnRequestedForExtraPlayer
+global function DEV_TestMPTitanForMap
+
+//global function CodeCallback_Ping
+
+global function SetGameState
+global function GetGameModeAnnouncement
+
+global function CodeCallback_GamerulesThink
+
+global struct SvGlobalsSP
+{
+	int gruntCombatState = eGruntCombatState.IDLE
+
+	array<void functionref( entity )> onLoadSaveGameCallbacks
+}
+
+global SvGlobalsSP svGlobalSP
+
+//////////////////////////////
+
+global function DEV_ToggleFriendlyHighlight
+
+//////////////////////////////
+
+struct
+{
+	LevelTransitionStruct ornull storedLevelTransitionStruct
+	entity spPetTitanStart
+	entity protagonist
+	bool friendlyHighlightEnabled = true
+	float playerLastSlideTime
+} file
+
+void function GamemodeSp_Init()
+{
+	FlagInit( "FriendlyFireStrict" )
+	FlagInit( "TitanCanSavePlayer" )
+	FlagInit( "TitanDeathPenalityDisabled" )
+	FlagInit( "SaveGame_Enabled", true )
+	FlagInit( "MissionFailed" )
+	RegisterSignal( "TitanSavesPlayer" )
+	
+	FlagSet( "PilotBot" )
+
+	AddSoulDeathCallback( SoulDeath_ReloadOnPetTitanDeath )
+	AddClientCommandCallback( "RestartMission", ClientCommand_RestartMission )
+
+	SetRoundBased( false )
+
+	AddCallback_OnClientConnecting( SpPlayerConnecting )
+	AddCallback_OnClientConnected( SpPlayerConnected )
+
+	AddSpawnCallback( "npc_soldier", 	SpNpcCommon )
+	AddSpawnCallback( "npc_spectre", 	SpNpcCommon )
+	AddSpawnCallback( "npc_titan", 		SpNpcCommon )
+
+	AddSpawnCallback( "npc_soldier", 	SpNpcCommonGrunt )
+
+	AddSpawnCallbackEditorClass( "info_target", "info_pet_titan_start", PetTitanStartSpawnInit )
+	AddCallback_OnPlayerRespawned( GameStateSP_OnPlayerRespawn )
+
+	AddDamageCallbackSourceID( eDamageSourceId.damagedef_titan_fall, PreventFriendlyTitanfallDamage )
+	AddDamageCallbackSourceID( eDamageSourceId.damagedef_reaper_fall, PreventFriendlyTitanfallDamage )
+
+	shGlobal.proto_soldierShieldRegenDelay = 3000.0
+	svGlobal.cloakBreaksOnMelee		= true
+	svGlobal.defaultPilotLeechTime	= 2.0
+
+	//AddDamageCallback( "player", DiminishPlayerComboDamage )
+
+	SPTitanLoadout_SetupForLevelStart()
+
+	SpSharedInit()
+
+	AddCallback_EntitiesDidLoad( EntitiesDidLoad_SpGameState )
+	AddDeathCallback( "npc_soldier", SoldierFriendlyFireCheck_OnKilled )
+
+	AddCallback_OnPilotBecomesTitan( PilotBecomesTitanStoreWeaponVar )
+	AddCallback_OnTitanBecomesPilot( FixupCoopTitanNamesForDisembark )
+	
+	AddOnRodeoStartedCallback( COOP_PilotStartRodeo )
+	AddOnRodeoEndedCallback( COOP_PilotEndRodeo )
+
+	// SAVE THIS LEVEL IF IT'S IN THE LEVEL LIST
+	var dataTable = GetDataTable( $"datatable/sp_levels.rpak" )
+	string mapName = GetMapName()
+	string startPoint = GetStartPoint()
+	int numRows = GetDatatableRowCount( dataTable )
+	int lastLevelNum = 0
+
+	int bspCol = GetDataTableColumnByName( dataTable, "level" )
+	int levelCol = GetDataTableColumnByName( dataTable, "levelNum" )
+
+	for ( int i=0; i<numRows; i++ )
+	{
+		string levelBsp = GetDataTableString( dataTable, i, bspCol )
+		int levelNum = GetDataTableInt( dataTable, i, levelCol )
+
+		if ( levelBsp == mapName )
+		{
+			#if DEV
+			printt( "Setting this level as unlocked" )
+			printt( "BSP: " + levelBsp )
+			printt( "Level Num: " + levelNum )
+			#endif
+
+			SetConVarInt( "sp_lastMission", levelNum )
+			lastLevelNum = levelNum
+			break
+		}
+	}
+
+	int farthestLevelUnlocked = GetConVarInt( "sp_unlockedMission" )
+
+	if( Script_IsRunningTrialVersion() )
+		SetConVarInt( "sp_unlockedMission", 1 ) // Set to sp_crashsite so if they buy the game, it starts there.
+	else
+		SetConVarInt( "sp_unlockedMission", maxint(farthestLevelUnlocked, lastLevelNum) )
+
+	foreach( entity player in GetPlayerArray() )
+		UpdateHeroStatsForPlayer( player )
+
+	if ( IsTestMap() )
+	{
+		PilotLoadoutDef loadout = GetPilotLoadoutForCurrentMapSP()
+		foreach ( model in GetModelsFromSetFile( loadout.setFile ) )
+		{
+			PrecacheModel( model )
+		}
+
+		TitanLoadoutDef titanLoadout = GetTitanLoadoutForCurrentMap()
+		foreach ( model in GetModelsFromSetFile( titanLoadout.setFile ) )
+		{
+			PrecacheModel( model )
+		}
+	}
+}
+
+void function COOP_PilotStartRodeo( entity pilot, entity titan )
+{
+	pilot.Highlight_SetParam( 1, 0, < 0.5, 2.0, 0.5 > )
+	pilot.SetNameVisibleToFriendly( true )
+}
+
+void function COOP_PilotEndRodeo( entity pilot, entity titan )
+{
+	pilot.Highlight_SetParam( 1, 0, HIGHLIGHT_COLOR_FRIENDLY )
+}
+
+void function EntitiesDidLoad_SpGameState()
+{
+	SetGameState( eGameState.Playing )
+	FlagSet( "ReadyToStartMatch" )
+
+	file.storedLevelTransitionStruct = GetLevelTransitionStruct()
+
+	SetCustomIntroLength( 0 )
+
+	level.nv.replayDisabled = true //HACK - remove once the bug about replay hud is fixed
+	// level.nv.minimapState = eMinimapState.Hidden
+
+	level.nv.replayDisabled = true
+	if ( !IsTestMap() )
+		level.nv.titanAvailability = eTitanAvailability.Never
+
+	ServerCommand( "sv_weapon_despawn_Time 90" )
+}
+
+/************************************************************************************************\
+
+ ######   #######  ##    ## ##    ## ########  ######  ########
+##    ## ##     ## ###   ## ###   ## ##       ##    ##    ##
+##       ##     ## ####  ## ####  ## ##       ##          ##
+##       ##     ## ## ## ## ## ## ## ######   ##          ##
+##       ##     ## ##  #### ##  #### ##       ##          ##
+##    ## ##     ## ##   ### ##   ### ##       ##    ##    ##
+ ######   #######  ##    ## ##    ## ########  ######     ##
+
+\************************************************************************************************/
+void function SpPlayerConnecting( entity player )
+{
+	SetTargetName( player, "player" + player.entindex() )
+	
+	player.p.connectTime = Time()
+	
+	SetTeam( player, TEAM_MILITIA )
+	InitPassives( player )
+
+	player.SetInventoryChangedCallbackEnabled( true )
+
+	entity start = GetEnt( "info_player_start" )
+	player.SetOrigin( start.GetOrigin() )
+	player.SetAngles( start.GetAngles() )
+	
+	if ( IsValid( file.spPetTitanStart ) && !IsValid( file.protagonist ) )
+	{
+		CreatePetTitan( player )
+		entity titan = player.GetPetTitan()
+		if ( titan != null )
+			titan.kv.alwaysAlert = false
+		
+		file.protagonist = player
+	}
+}
+
+void function SpPlayerConnected( entity player )
+{
+	thread SpPlayerConnected_Thread( player )
+}
+
+void function SpPlayerConnected_Thread( entity player )
+{
+	player.EndSignal( "OnDestroy" )
+
+	if ( IsTestMap() )
+		return
+
+	string levelName = GetMapName()
+	int startIndex = GetStartPointIndexFromName( levelName, GetCurrentStartPoint() )
+
+	string startPointEnum = GetStartPointNameFromIndex( levelName, startIndex )
+	if ( !StartPointHasDetente( levelName, startPointEnum ) )
+		return
+
+	var dataTable = GetDataTable( $"datatable/sp_introscreen.rpak" )
+	int row = GetDataTableRowMatchingStringValue( dataTable, GetDataTableColumnByName( dataTable, "level" ), levelName )
+	if ( row == -1 )
+		return
+
+	float delay = GetDataTableFloat( dataTable, row, GetDataTableColumnByName( dataTable, "bgFadeDelay" ) )
+	float fadeTime = GetDataTableFloat( dataTable, row, GetDataTableColumnByName( dataTable, "bgFadeTime" ) )
+
+	Highlight_SetFriendlyHighlight( player, "sp_friendly_hero" )
+	player.Highlight_SetParam( 1, 0, HIGHLIGHT_COLOR_FRIENDLY )
+	if( !Coop_CheckIfIsCutscenePlaying( player ) )
+	{
+		foreach( p in GetPlayerArray() )
+		{
+			ScreenFadeFromBlack( p, 0.1, 0.1 )
+			RemoveCinematicFlag( p, CE_FLAG_HIDE_MAIN_HUD )
+			RemoveCinematicFlag( p, CE_FLAG_INTRO )
+			ClientCommand( p, "script_client thread MainHud_TurnOn_RUI( false )" )
+		}
+	}
+}
+
+void function GameStateSP_OnPlayerRespawn( entity player )
+{
+	UpdateSpDifficulty( player )
+	thread TrackPlayerLastSlideTime( player )
+	
+	Highlight_SetFriendlyHighlight( player, "sp_friendly_hero" )
+	player.Highlight_SetParam( 1, 0, HIGHLIGHT_COLOR_FRIENDLY )
+	
+	player.SetOrigin( GetSaveLocation() )
+	player.kv.CollisionGroup = TRACE_COLLISION_GROUP_BLOCK_WEAPONS
+	
+	ScreenFadeFromBlack( player, 0.5, 0.5 )
+	RemoveCinematicFlag( player, CE_FLAG_HIDE_MAIN_HUD )
+	RemoveCinematicFlag( player, CE_FLAG_INTRO )
+	ClientCommand( player, "script_client thread MainHud_TurnOn_RUI( false )" )
+	
+	PilotLoadoutDef loadout = GetPilotLoadoutForCurrentMapSP()
+	GivePilotLoadout( player, loadout )
+	
+	OnTimeShiftGiveGlove( player )
+	if ( ( GetMapName() == "sp_beacon" || GetMapName() == "sp_beacon_spoke0" ) && Flag( "HasChargeTool" ) )
+		GiveBatteryChargeToolSingle( player )
+}
+
+void function Coop_TitanSpawnRequestedForExtraPlayer( entity player )
+{
+	if ( IsValid( file.spPetTitanStart ) )
+		CreatePetTitan( player )
+}
+
+float function SP_PlayerLastSlideTime()
+{
+	return file.playerLastSlideTime
+}
+
+void function PetTitanStartSpawnInit( entity spawn )
+{
+	file.spPetTitanStart = spawn
+}
+
+void function TrackPlayerLastSlideTime( entity player )
+{
+	player.EndSignal( "OnDeath" )
+
+	for ( ;; )
+	{
+		if ( player.IsSliding() )
+			file.playerLastSlideTime = Time()
+		wait 0.5
+	}
+}
+
+void function CreatePetTitan( entity player)
+{
+	Assert( IsValid( file.spPetTitanStart ) )
+	// Player is in his Titan, don't create a titan
+	
+	if ( player.IsTitan() )
+		return
+
+	// Player already has a pet titan, don't create one
+	entity petTitan = player.GetPetTitan()
+	if ( IsValid( petTitan ) )
+		return
+	
+	bool foundBT = false
+	foreach ( entity titan in GetTitanArrayOfTeam( player.GetTeam() ) )
+	{
+		if( GetTitanCharacterName( titan ) == "bt" )
+		{
+			foundBT = true
+			if( !IsValid( titan.GetBossPlayer() ) )
+			{
+				titan.SetOwner( player )
+				titan.SetBossPlayer( player )
+				SoulBecomesOwnedByPlayer( titan.GetTitanSoul(), player )
+			}
+		}
+	}
+	
+	entity titanStart = file.spPetTitanStart
+	if( !foundBT )
+	{
+		// Make a pet titan at the spawn point
+		TitanLoadoutDef loadout = GetTitanLoadoutForCurrentMap()
+
+		entity titan = CreateAutoTitanForPlayer_FromTitanLoadout( player, loadout, titanStart.GetOrigin(), titanStart.GetAngles() )
+		DispatchSpawn( titan )
+		player.SetPetTitan( titan )
+		titan.SetOwner( player )
+
+		titan.DisableHibernation()
+	}
+	else if( GetPreferredTitanForPlayer( player ).tolower() != "none" )
+	{
+		entity npc = expect entity( PickRandomTitanForPlayer( player, titanStart.GetOrigin(), titanStart.GetAngles() ) )
+		
+		if( !IsValid( npc ) )
+			return
+		
+		player.SetPetTitan( npc )
+		npc.SetOwner( player )
+		npc.SetBossPlayer( player )
+		npc.DisableHibernation()
+	}
+}
+
+void function CreatePetTitanAtOrigin( entity player, vector origin, vector angles)
+{
+	Assert( IsValid( file.spPetTitanStart ) )
+	// Player is in his Titan, don't create a titan
+	if ( player.IsTitan() )
+		return
+
+	// Player already has a pet titan, don't create one
+	entity petTitan = player.GetPetTitan()
+	if ( IsValid( petTitan ) )
+		return
+	
+	bool foundBT = false
+	foreach ( entity titan in GetTitanArrayOfTeam( player.GetTeam() ) )
+	{
+		if( GetTitanCharacterName( titan ) == "bt" )
+		{
+			foundBT = true
+			if( !IsValid( titan.GetBossPlayer() ) )
+				SetPlayerPetTitan( player, titan )
+		}
+	}
+
+	if( !foundBT )
+	{
+		// Make a pet titan at the spawn point
+		TitanLoadoutDef loadout = GetTitanLoadoutForCurrentMap()
+		entity titanStart = file.spPetTitanStart
+
+		entity titan = CreateAutoTitanForPlayer_FromTitanLoadout( player, loadout, origin, angles )
+		DispatchSpawn( titan )
+		player.SetPetTitan( titan )
+		titan.SetOwner( player )
+
+		titan.DisableHibernation()
+	}
+	else if( GetPreferredTitanForPlayer( player ).tolower() != "none" )
+	{
+		entity ornull npc = PickRandomTitanForPlayer( player, origin, angles )
+		
+		if( !IsValid( npc ) )
+			return
+		
+		expect entity( npc )
+		player.SetPetTitan( npc )
+		npc.SetOwner( player )
+		npc.SetBossPlayer( player )
+		npc.DisableHibernation()
+	}
+}
+
+void function DEV_TestMPTitanForMap()
+{
+	entity titanStart = file.spPetTitanStart
+	entity npc = expect entity( PickRandomTitanForPlayer( GetProtagonist(), titanStart.GetOrigin(), titanStart.GetAngles() ) )
+}
+
+entity ornull function PickRandomTitanForPlayer( entity player, vector origin, vector angles )
+{
+	TitanLoadoutDef loadout = GetTitanLoadoutForCurrentMap()
+	
+	entity npc
+	string ChosenTitan = GetPreferredTitanForPlayer( player ).tolower()
+	print( player + " requested Titan Set: " + ChosenTitan )
+	
+	switch( ChosenTitan )
+	{
+		case "ion":
+		npc = CreateNPCTitan( "titan_atlas_ion_prime", TEAM_MILITIA, origin, angles )
+		SetSpawnOption_AISettings( npc, "npc_titan_atlas_stickybomb_coop" )
+		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
+		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
+		SetSpawnOption_OwnerPlayer( npc, player )
+		SetSpawnOption_SquadName( npc, "bt" )
+		DispatchSpawn( npc )
+		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_ion"
+		array<entity> primaryWeapons = npc.GetMainWeapons()
+		entity weapon = primaryWeapons[0]
+		if( IsValid( weapon ) )
+		{
+			weapon.SetSkin( 1 )
+			weapon.SetCamo( 144 )
+		}
+		break
+		
+		case "scorch":
+		npc = CreateNPCTitan( "titan_ogre_scorch_prime", TEAM_MILITIA, origin, angles )
+		SetSpawnOption_AISettings( npc, "npc_titan_ogre_meteor_coop" )
+		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
+		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
+		SetSpawnOption_OwnerPlayer( npc, player )
+		SetSpawnOption_SquadName( npc, "bt" )
+		DispatchSpawn( npc )
+		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_scorch_prime"
+		array<entity> primaryWeapons = npc.GetMainWeapons()
+		entity weapon = primaryWeapons[0]
+		if( IsValid( weapon ) )
+		{
+			weapon.SetSkin( 1 )
+			weapon.SetCamo( 31 )
+			weapon.AddMod( "fd_wpn_upgrade_2" )
+		}
+		break
+		
+		case "northstar":
+		npc = CreateNPCTitan( "titan_stryder_northstar_prime", TEAM_MILITIA, origin, angles )
+		SetSpawnOption_AISettings( npc, "npc_titan_stryder_sniper_coop" )
+		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
+		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
+		SetSpawnOption_OwnerPlayer( npc, player )
+		SetSpawnOption_SquadName( npc, "bt" )
+		DispatchSpawn( npc )
+		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_northstar"
+		array<entity> primaryWeapons = npc.GetMainWeapons()
+		entity weapon = primaryWeapons[0]
+		if( IsValid( weapon ) )
+			weapon.AddMod( "pas_northstar_optics" )
+		break
+		
+		case "ronin":
+		npc = CreateNPCTitan( "titan_stryder_ronin_prime", TEAM_MILITIA, origin, angles )
+		SetSpawnOption_AISettings( npc, "npc_titan_stryder_leadwall_coop" )
+		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
+		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
+		SetSpawnOption_OwnerPlayer( npc, player )
+		SetSpawnOption_SquadName( npc, "bt" )
+		DispatchSpawn( npc )
+		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_ronin"
+		array<entity> primaryWeapons = npc.GetMainWeapons()
+		entity weapon = primaryWeapons[0]
+		if( IsValid( weapon ) )
+		{
+			weapon.AddMod( "pas_ronin_weapon" )
+			weapon.SetSkin( 1 )
+			weapon.SetCamo( 19 )
+		}
+		break
+		
+		case "tone":
+		npc = CreateNPCTitan( "titan_atlas_tone_prime", TEAM_MILITIA, origin, angles )
+		SetSpawnOption_AISettings( npc, "npc_titan_atlas_tracker_coop" )
+		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
+		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
+		SetSpawnOption_OwnerPlayer( npc, player )
+		SetSpawnOption_SquadName( npc, "bt" )
+		DispatchSpawn( npc )
+		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_tone"
+		array<entity> primaryWeapons = npc.GetMainWeapons()
+		entity weapon = primaryWeapons[0]
+		if( IsValid( weapon ) )
+		{
+			weapon.SetSkin( 1 )
+			weapon.SetCamo( 30 )
+			weapon.AddMod( "fast_reload" )
+		}
+		break
+		
+		case "legion":
+		npc = CreateNPCTitan( "titan_ogre_legion_prime", TEAM_MILITIA, origin, angles )
+		SetSpawnOption_AISettings( npc, "npc_titan_ogre_minigun_coop" )
+		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
+		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
+		SetSpawnOption_OwnerPlayer( npc, player )
+		SetSpawnOption_SquadName( npc, "bt" )
+		DispatchSpawn( npc )
+		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_legion_prime"
+		array<entity> primaryWeapons = npc.GetMainWeapons()
+		entity weapon = primaryWeapons[0]
+		if( IsValid( weapon ) )
+		{
+			weapon.SetSkin( 1 )
+			weapon.SetCamo( 17 )
+			weapon.AddMod( "pas_legion_weapon" )
+			weapon.AddMod( "fd_piercing_shots" )
+		}
+		break
+		
+		//Monarch is not here because by lore she was only invented after IMC reverse-engineered what they could from 2 destroyed Vanguards
+	}
+	
+	if( IsValid( npc ) )
+	{
+		DisableTitanRodeo( npc )
+		npc.kv.alwaysAlert = true
+		npc.SetUsePrompts( "#HOLD_TO_EMBARK", "#PRESS_TO_EMBARK" )
+		ShowName( npc )
+		entity soul = npc.GetTitanSoul()
+		if( IsValid( soul ) )
+		{
+			soul.soul.regensHealth = true
+			soul.SetPreventCrits( true )
+			HideCrit( npc )
+		}
+		return npc
+	}
+}
+
+void function CreatePetTitanAtOriginWithTf( entity player, vector origin, vector angles)
+{
+	Assert( IsValid( file.spPetTitanStart ) )
+	// Player is in his Titan, don't create a titan
+	if ( player.IsTitan() )
+		return
+
+	// Player already has a pet titan, don't create one
+	entity petTitan = player.GetPetTitan()
+	if ( IsValid( petTitan ) )
+		return
+
+	// Get loadout for map
+	TitanLoadoutDef loadout = GetTitanLoadoutForCurrentMap()
+
+	entity titan = CreateAutoTitanForPlayer_FromTitanLoadout( player, loadout, origin, angles )
+	SetSpawnOption_Titanfall( titan )
+	DispatchSpawn( titan )
+	player.SetPetTitan( titan )
+	titan.SetOwner( player )
+
+	titan.DisableHibernation()
+}
+
+void function FixupCoopTitanNamesForDisembark( entity player, entity titan )
+{
+	titan.kv.CollisionGroup = TRACE_COLLISION_GROUP_BLOCK_WEAPONS
+	RemoveCinematicFlag( player, CE_FLAG_HIDE_MAIN_HUD )
+	RemoveCinematicFlag( player, CE_FLAG_INTRO )
+	ClientCommand( player, "script_client thread MainHud_TurnOn_RUI( false )" )
+}
+
+/************************************************************************************************\
+
+########     ###    ##      ##    ###     ######  ########
+##     ##   ## ##   ###    ###   ## ##   ##    ## ##
+##     ##  ##   ##  ####  ####  ##   ##  ##       ##
+##     ## ##     ## ## #### ## ##     ## ##   ### ######
+##     ## ######### ##  ##  ## ######### ##    ## ##
+##     ## ##     ## ##      ## ##     ## ##    ## ##
+########  ##     ## ##      ## ##     ##  ######  ########
+
+\************************************************************************************************/
+
+// putting this stuff here for now since it's only for SP at this point
+
+
+
+
+bool function TryTitanSavesPlayer( entity player )
+{
+	if ( !Flag( "TitanCanSavePlayer" ) )
+		return false
+
+	if ( !IsAlive( player.GetPetTitan() ) )
+		return false
+
+	entity titan = player.GetPetTitan()
+	if ( TitanIsCurrentlyEmbarkableForPlayer( player, titan ) )
+	{
+		thread TitanSavesPlayer( player, titan )
+		return true
+	}
+
+	return false
+}
+
+void function TitanSavesPlayer( entity player, entity titan )
+{
+	player.EndSignal( "OnDestroy" )
+	titan.EndSignal( "OnDeath" )
+
+	player.SetNoTarget( true )
+	player.SetInvulnerable()
+	titan.SetInvulnerable()
+
+	player.DisableWeapon()
+	player.FreezeControlsOnServer()
+	player.ForceCrouch()
+
+	OnThreadEnd(
+		function() : ( player, titan )
+		{
+			if ( IsValid( player ) )
+			{
+				if ( !IsPlayerEmbarking( player ) )
+				{
+					player.EnableWeapon()
+				}
+				player.UnforceCrouch()
+				player.UnfreezeControlsOnServer()
+				player.ClearInvulnerable()
+				player.SetNoTarget( false )
+			}
+
+			if ( IsValid( titan ) )
+				titan.ClearInvulnerable()
+		}
+	)
+
+	wait 0.25
+
+	float fadeTime = 2
+	float blackTime_pre = 4.0
+	float blackTime_post = 1.0
+
+	//thread ScreenFadeToBlack( player, 2.0, blackTime_pre )
+
+	wait blackTime_pre * 0.5
+	string titanAlias = GenerateTitanOSAlias( player, "briefCriticalDamage" )
+	thread EmitSoundOnEntity( player, titanAlias )
+	wait blackTime_pre * 0.5
+
+	vector ornull clampedPos = NavMesh_ClampPointForAI( player.GetOrigin(), titan )
+	if ( clampedPos != null )
+		titan.SetOrigin( expect vector( clampedPos ) )
+
+	titan.SetAngles( Vector( 0, player.GetAngles().y, 0 ) )
+
+	entity soul = titan.GetTitanSoul()
+	SetStanceKneel( soul )
+
+	table criteria = {
+		embark = "front",
+		titanCanStandRequired = false
+	}
+
+	var embarkAction
+	embarkAction = FindEmbarkActionForCriteria( criteria )
+	if ( embarkAction == null )
+		embarkAction = GetRandomEmbarkAction()
+
+	table action = expect table( GenerateEmbarkActionTable( player, titan, embarkAction ) )
+	thread PlayerEmbarksTitan( player, titan, action )
+	//thread ScreenFadeFromBlack( player, 12.0, blackTime_post )
+
+	player.Signal( "TitanSavesPlayer" )
+}
+
+bool function DamageAlwaysLethal( var damageInfo )
+{
+	const damageMask = DF_INSTANT | DF_IMPACT | DF_TITAN_STEP | DF_KILLSHOT | DF_MELEE // | DF_EXPLOSION
+	if ( DamageInfo_GetCustomDamageType( damageInfo ) & damageMask )
+		return true
+//	not quite sure what this returns. It doesn't seem to be the flags listed in death_package.nut
+//	if ( DamageInfo_GetDamageType( damageInfo ) &  damageMask )
+//		return false
+
+	// damage type doesn't seem to be correct for most things so I'm forced to check GetDamageSourceIdentifier -Roger
+	switch ( DamageInfo_GetDamageSourceIdentifier( damageInfo ) )
+	{
+		case damagedef_crush:
+		case damagedef_nuclear_core:
+		case damagedef_suicide:
+		case damagedef_titan_fall:
+		case damagedef_titan_hotdrop:
+		case eDamageSourceId.bubble_shield:
+		case eDamageSourceId.burn:
+		case eDamageSourceId.droppod_impact:
+		case eDamageSourceId.evac_dropship_explosion:
+		case eDamageSourceId.fall:
+		case eDamageSourceId.flash_surge:
+		case eDamageSourceId.floor_is_lava:
+		case eDamageSourceId.human_execution:
+		case eDamageSourceId.human_melee:
+		case eDamageSourceId.indoor_inferno:
+		case eDamageSourceId.outOfBounds:
+		case eDamageSourceId.round_end:
+		case eDamageSourceId.splat:
+		case eDamageSourceId.stuck:
+		case eDamageSourceId.submerged:
+		case eDamageSourceId.switchback_trap:
+		case eDamageSourceId.team_switch:
+		case eDamageSourceId.titan_execution:
+		case eDamageSourceId.titan_explosion:
+		case eDamageSourceId.wall_smash:
+//		case eDamageSourceId.grunt_melee:
+//		case eDamageSourceId.prowler_melee:
+//		case eDamageSourceId.spectre_melee:
+			return true
+
+		default:
+			break
+	}
+
+	return false
+}
+
+/************************************************************************************************\
+
+ ##    ## ########   ######
+ ###   ## ##     ## ##    ##
+ ####  ## ##     ## ##
+ ## ## ## ########  ##
+ ##  #### ##        ##
+ ##   ### ##        ##    ##
+ ##    ## ##         ######
+
+\************************************************************************************************/
+void function SpNpcCommon( entity npc )
+{
+	if ( npc.GetTeam() == TEAM_MILITIA )
+	{
+		if ( !npc.IsTitan() )
+			HideName( npc )
+		else
+			npc.kv.CollisionGroup = TRACE_COLLISION_GROUP_BLOCK_WEAPONS
+
+		// this is a temporary stop gap until we get skins
+		if ( file.friendlyHighlightEnabled && !IsValid( GetPetTitanOwner( npc ) ) )
+			Highlight_SetFriendlyHighlight( npc, "sp_friendly_pilot" )
+	}
+	else if ( npc.GetTeam() == TEAM_IMC )
+	{
+		if( npc.IsTitan() )
+		{
+			int scaledHealth = int( npc.GetHealth() * GetConVarFloat( "coop_enemyTitanHealthScale" ) )
+			npc.SetMaxHealth( scaledHealth )
+			npc.SetHealth( scaledHealth )
+		}
+	}
+}
+
+void function SpNpcCommonGrunt( entity npc )
+{
+	// heros clear this setting so they should keep their names
+	if ( npc.GetTeam() == TEAM_MILITIA )
+	{
+
+		string title
+		if ( npc.Dev_GetAISettingByKeyField( "IsGenericGrunt" ) == 0 )
+		{
+			title = npc.GetSettingTitle()
+		}
+		else
+		{
+			title = GetMilitiaTitle()
+		}
+
+		npc.SetTitle( title )
+		ShowName( npc )
+	}
+}
+
+void function DiminishPlayerComboDamage( entity player, var damageInfo )
+{
+	if ( !IsPilot( player ) )
+		return
+
+//	printt( "damage " + DamageInfo_GetDamage( damageInfo ) )
+//	printt( "shield health " + player.GetShieldHealth() )
+	if ( player.GetShieldHealth() > 0 )
+		return
+
+	// blunt damage from combos
+	float damage = DamageInfo_GetDamage( damageInfo )
+
+	float recentDamage = TotalDamageOverTime_BlendedOut( player, 0.5, 1.5 )
+
+	// damage is ramped down based on how much damage was taken recently
+	float damageMod = GraphCapped( recentDamage, 70, 140, 1.0, 0.1 )
+	DamageInfo_ScaleDamage( damageInfo, damageMod )
+}
+
+void function SoulDeath_ReloadOnPetTitanDeath( entity soul, var damageInfo )
+{
+	if ( Flag( "TitanDeathPenalityDisabled" ) )
+		return
+
+	if ( IsTestMap() )
+		return
+
+	thread SoulDeath_ReloadOnPetTitanDeath_Thread( soul, damageInfo )
+}
+
+void function SoldierFriendlyFireCheck_OnKilled( entity npc, var damageInfo )
+{
+	if ( !Flag( "FriendlyFireStrict" ) )
+		return
+
+	entity attacker = DamageInfo_GetAttacker( damageInfo )
+	if ( !attacker.IsPlayer() )
+		return
+
+	if ( npc.GetTeam() != attacker.GetTeam() )
+		return
+
+	thread SoldierFriendlyFireCheck_OnKilledDelayed()
+}
+
+void function SoldierFriendlyFireCheck_OnKilledDelayed()
+{
+	//FlagClear( "SaveGame_Enabled" ) // no more saving, you have lost
+	wait 0.75
+	FriendlyFire_MissionFailure()
+}
+
+void function FriendlyFire_MissionFailure()
+{
+	if ( Flag( "MissionFailed" ) )
+		return
+
+	foreach ( player in GetPlayerArray() )
+	{
+		Remote_CallFunction_NonReplay( player, "ServerCallback_FriendlyFire_MissionFailure" )
+	}
+
+	ReloadForMissionFailure()
+}
+
+void function SoulDeath_ReloadOnPetTitanDeath_Thread( entity soul, var damageInfo )
+{
+	entity player = soul.GetBossPlayer()
+
+	if ( !IsValid( player ) )
+		return
+	
+	if ( !player.hasConnected )
+		return
+
+	if ( !level.nv.replayDisabled )
+	{
+		if ( player.p.watchingPetTitanKillReplay )
+			return
+
+		player.p.watchingPetTitanKillReplay = true
+	}
+	
+	if( GetTitanCharacterName( soul.GetTitan() ) != "bt" ) //Coop stuff, only BT matters
+		return
+
+	if ( damageInfo == null )
+	{
+		printt( "ServerCallback_TitanDied with null sourceid" )
+		ReloadForMissionFailure()
+		return
+	}
+
+	int source = DamageInfo_GetDamageSourceIdentifier( damageInfo )
+	Remote_CallFunction_NonReplay( player, "ServerCallback_TitanDied", source )
+	#if DEV
+	printt( "ServerCallback_TitanDied with sourceid " + source + " and source string " + GetObitFromDamageSourceID( source )  )
+	#endif
+
+	if ( IsInstantDeath( damageInfo ) )
+	{
+		ReloadForMissionFailure()
+		return
+	}
+	entity attacker = DamageInfo_GetAttacker( damageInfo )
+	if ( !IsValid( attacker ) )
+	{
+		ReloadForMissionFailure()
+		return
+	}
+
+	int index = attacker.GetIndexForEntity()
+	entity titan = soul.GetTitan()
+
+	//FlagClear( "SaveGame_Enabled" ) // no more saving, you have lost
+
+	if ( !level.nv.replayDisabled )
+	{
+		/*
+		wait 3.8
+		float replayDelay = 6.5
+		player.SetKillReplayDelay( replayDelay )
+		player.SetViewIndex( index )
+
+		if ( IsValid( titan ) )
+			player.SetKillReplayVictim( titan )
+
+		ReloadForMissionFailure( replayDelay + 2.5 )
+		*/
+	}
+	else
+	{
+		//ReloadForMissionFailure() // replayDelay + 2.5
+	}
+}
+
+bool function HasBatteryChargeTool( entity player )
+{
+	switch ( CHARGE_TOOL )
+	{
+		case "sp_weapon_proto_battery_charger_offhand":
+			return HasOffhandWeapon( player, CHARGE_TOOL )
+
+		case "sp_weapon_arc_tool":
+			return HasWeapon( player, CHARGE_TOOL )
+	}
+
+	unreachable
+}
+
+void function GiveBatteryChargeTool( entity player )
+{
+	foreach( player in GetPlayerArray() )
+		GiveBatteryChargeToolSingle( player )
+}
+
+void function GiveBatteryChargeToolSingle( entity player )
+{
+	if ( HasBatteryChargeTool( player ) )
+		return
+				
+	switch ( CHARGE_TOOL )
+	{
+		case "sp_weapon_proto_battery_charger_offhand":
+			player.GiveOffhandWeapon( CHARGE_TOOL, OFFHAND_SPECIAL )
+			break
+
+		case "sp_weapon_arc_tool":
+			player.GiveWeapon( CHARGE_TOOL )
+			break
+	}
+	UpdateArcConnectorHints()
+}
+
+/*
+void function CodeCallback_Ping( entity player )
+{
+
+}
+*/
+
+/* ----------------------------------------------------------------------------------------------
+
+STUFF FORM MP THAT WE WILL SLOWLY GET RID OF
+
+-------------------------------------------------------------------------------------------------*/
+
+string function GetGameModeAnnouncement()
+{
+	return ""
+}
+
+void function SetGameState( int newState )
+{
+	level.nv.gameStartTime = Time()
+	level.nv.gameStateChangeTime = Time()
+	level.nv.gameState = newState
+	svGlobal.levelEnt.Signal( "GameStateChanged" )
+
+	foreach ( callbackFunc in svGlobal.gameStateEnterCallbacks[ newState ] )
+	{
+		callbackFunc()
+	}
+}
+
+void function CodeCallback_GamerulesThink()
+{
+
+}
+
+void function DEV_ToggleFriendlyHighlight()
+{
+	file.friendlyHighlightEnabled = !file.friendlyHighlightEnabled
+	UpdateFriendlyHighlight()
+}
+
+void function DisableFriendlyHighlight()
+{
+	file.friendlyHighlightEnabled = false
+	UpdateFriendlyHighlight()
+}
+
+void function EnableFriendlyHighlight()
+{
+	file.friendlyHighlightEnabled = true
+	UpdateFriendlyHighlight()
+}
+
+void function UpdateFriendlyHighlight()
+{
+	if ( file.friendlyHighlightEnabled )
+	{
+		foreach ( npc in GetNPCArrayOfTeam( TEAM_MILITIA ) )
+			Highlight_SetFriendlyHighlight( npc, "sp_friendly_pilot" )
+	}
+	else
+	{
+		foreach ( npc in GetNPCArrayOfTeam( TEAM_MILITIA ) )
+			Highlight_ClearFriendlyHighlight( npc )
+	}
+}
+
+bool function ClientCommand_RestartMission( entity player, array<string> args )
+{
+	ServerRestartMission( player )
+	return true
+}
+
+void function ServerRestartMission( entity player )
+{
+	if ( IsTestMap() )
+	{
+		ServerCommand( "reload" )
+		return
+	}
+
+	string mapName = GetMapName()
+	LevelTransitionStruct ornull trans = file.storedLevelTransitionStruct
+	if ( trans == null )
+	{
+		int startIndex = 0
+		#if DEV
+		string startName = Dev_GetStartCommandLine( mapName )
+		if ( startName != "" )
+			startIndex = GetStartPointIndexFromName( mapName, startName )
+		#endif
+		// loaded a level manually in dev or are in sp_training
+		ExecuteLoadingClientCommands_SetStartPoint( mapName, startIndex )
+		GameRules_ChangeMap( mapName, GAMETYPE )
+		return
+	}
+	
+	ExecuteLoadingClientCommands_SetStartPoint( mapName, GetCurrentStartPointIndex() )
+	GameRules_ChangeMap( mapName, GAMETYPE )
+}
+
+void function PilotBecomesTitanStoreWeaponVar( entity pilot, entity npctitan )
+{
+	entity weapon = pilot.GetMainWeapons()[0]
+	int index = GetTitanLoadoutIndex( weapon.GetWeaponClassName() )
+	SetConVarInt( "sp_titanLoadoutCurrent", index )
+	pilot.kv.CollisionGroup = TRACE_COLLISION_GROUP_BLOCK_WEAPONS
+	RemoveCinematicFlag( pilot, CE_FLAG_HIDE_MAIN_HUD )
+	RemoveCinematicFlag( pilot, CE_FLAG_INTRO )
+	ClientCommand( pilot, "script_client thread MainHud_TurnOn_RUI( false )" )
+}
+
+void function PreventFriendlyTitanfallDamage( entity ent, var damageInfo )
+{
+	entity attacker = DamageInfo_GetAttacker( damageInfo )
+
+	if ( attacker.GetTeam() == ent.GetTeam() )
+	{
+		DamageInfo_SetDamage( damageInfo, 0 )
+	}
+}

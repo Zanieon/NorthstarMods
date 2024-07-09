@@ -1,0 +1,28 @@
+#base "npc_titan_atlas.txt"
+npc_titan_atlas_tracker_coop
+{
+	title 						#NPC_TITAN_ATLAS_TRACKER
+	WeaponCapacity				"FromLoadout"
+	npc_titan_player_settings	"titan_atlas_tone_prime"
+
+	BehaviorSelector		"behavior_titan_buddy"
+	
+	Health					7500 [$sp]
+	Health					7500 [$mp]
+	
+	circleStrafeDist			1500
+	circleStrafeAngleIncrement	15
+
+	aggresiveCombatHealthChangeRateDiff	300
+
+	DefaultModelName		"models/titans/medium/titan_medium_wraith.mdl" [$sp]
+	
+	titanCamoIndex -1
+	titanDecalIndex 11
+	titanSkinIndex 7
+	
+	footstep_type			"tone"
+	
+	returnToIdleTime		3
+	can_traverse 			1
+}
