@@ -670,13 +670,13 @@ void function LevelStartAudio( entity player )
 	//EmitSoundOnEntity( player, "sse_Wilds_Intro_UnmuteUnwanted" )
 	StopSoundOnEntity( player, "Duck_Wilds_Intro_MuteUnwanted" )
 	SetGlobalNetInt( "nighttimeAmbient", 1 )
-	foreach( player in GetPlayerArray() )
-		Remote_CallFunction_Replay( player, "ServerCallback_NighttimeAmbient", 1 ) // TODO makes this fop everyone ( a better way )
+	foreach( p in GetPlayerArray() )
+		Remote_CallFunction_Replay( p, "ServerCallback_NighttimeAmbient", 1 ) // TODO makes this fop everyone ( a better way )
 
 	FlagWait( "bt_intro_moveup" )
 	SetGlobalNetInt( "nighttimeAmbient", 2 )
-	foreach( player in GetPlayerArray() )
-		Remote_CallFunction_Replay( player, "ServerCallback_NighttimeAmbient", 2 )
+	foreach( p in GetPlayerArray() )
+		Remote_CallFunction_Replay( p, "ServerCallback_NighttimeAmbient", 2 )
 }
 
 void function LevelStartSubtitles( entity player )
@@ -1993,7 +1993,7 @@ void function StartPoint_Setup_BliskIntro( entity player )
 		EnableMorningLight( p )
 		SetPlayerForcedDialogueOnly( player, true )
 		p.DisableWeapon()
-		file.statusEffect_turnSlow = StatusEffect_AddEndless( p, eStatusEffect.turn_slow, 0.4 )
+		//file.statusEffect_turnSlow = StatusEffect_AddEndless( p, eStatusEffect.turn_slow, 0.4 )
 		Remote_CallFunction_Replay( player, "ServerCallback_HideHudIcons" )
 		Remote_CallFunction_Replay( player, "ServerCallback_NighttimeAmbient", 2 )
 	}
@@ -2380,7 +2380,7 @@ void function StartPoint_Setup_WakingUp( entity player )
 	{
 		MovePlayerToStartpoint( "startpoint_field_promotion" )
 		player.DisableWeapon()
-		file.statusEffect_turnSlow = StatusEffect_AddEndless( player, eStatusEffect.turn_slow, 0.4 )
+		//file.statusEffect_turnSlow = StatusEffect_AddEndless( player, eStatusEffect.turn_slow, 0.4 )
 
 		// remove hud for grunt
 		Remote_CallFunction_Replay( player, "ServerCallback_HideHudIcons" )
@@ -2676,14 +2676,13 @@ void function FieldPromotion_Promotion_Player( entity player )
 		Remote_CallFunction_Replay( p, "ServerCallback_FieldPromotionShadows", true )
 	}
 	waitthread Coop_SyncCutsceneToProtagonist( player, ogFinalWordsSequence, animRef )
-
-	FlagSet( "promoted" )
-	
 	foreach( entity p in GetPlayerArray() )
 	{
 		p.ClearParent()
 		ClearPlayerAnimViewEntity( p )
 	}
+	
+	FlagSet( "promoted" )
 
 	animRef.Destroy()
 }
@@ -2884,20 +2883,20 @@ void function Grave_DonHelmet( entity player )
 	foreach( p in GetPlayerArray() )
 	{
 		player.SetAnimNearZ(1)
-		file.statusEffect_turnSlow = StatusEffect_AddEndless( player, eStatusEffect.turn_slow, 0.35 )
+		//file.statusEffect_turnSlow = StatusEffect_AddEndless( player, eStatusEffect.turn_slow, 0.35 )
 	}
 
 	thread PlayAnimTeleport( rock, "rock_OG_grave", animRef )
 	thread PlayAnimTeleport( helmet, "helmet_OG_grave", animRef )
 	waitthread Coop_SyncCutsceneToProtagonist( player, helmetBootSequence, animRef )
-
+	Coop_ClearCutsceneFromProtagonist( player )
+	
 	foreach( p in GetPlayerArray() )
 	{
 		Remote_CallFunction_Replay( p, "ServerCallback_GraveShadowsAndDOF", false )
 		thread HelmetBootUpSequence( p )
 	}
-
-	Coop_ClearCutsceneFromProtagonist( player )
+	
 	animRef.Destroy()
 	rock.Destroy()
 	helmet.Destroy()
@@ -2918,7 +2917,7 @@ void function Grave_DonHelmet( entity player )
 	
 	foreach( p in GetPlayerArray() )
 	{
-		StatusEffect_Stop( p, file.statusEffect_turnSlow )
+		//StatusEffect_Stop( p, file.statusEffect_turnSlow )
 		StatusEffect_AddTimed( p, eStatusEffect.turn_slow, 0.35, 3, 3 )
 		thread LerpPlayerSpeed( p, 0.4, 1.0, 3.0 )
 	}
@@ -4778,6 +4777,13 @@ void function StartPoint_Battery3Path( entity player )
 	GetEntByScriptName( "battery3_path_ramp_down" ).Solid()
 
 	FlagWait( "battery_tracker2_commence" )
+	
+	foreach( p in GetPlayerArray() )
+	{
+		if( p != player )
+			thread BatteryTracker2( p )
+	}
+	
 	waitthread BatteryTracker2( player )
 
 //	Objective_Set( "#WILDS_OBJECTIVE_BATTERY3", GetEntByScriptName( "location_obj_battery3" ).GetOrigin() )
@@ -7160,18 +7166,15 @@ void function BatteryTrackerThread( entity player, array<entity> fakelocs, entit
 	foreach ( loc in fakelocs )
 	{
 		vector o = loc.GetOrigin()
-		foreach( p in GetPlayerArray() )
-			Remote_CallFunction_Replay( player, "ServerCallback_TrackBatteryLocations", o.x, o.y, o.z, false )
+		Remote_CallFunction_Replay( player, "ServerCallback_TrackBatteryLocations", o.x, o.y, o.z, false )
 		wait RandomFloatRange( 1.0, 1.8 )
 	}
 
 	vector o = realLoc.GetOrigin()
-	foreach( p in GetPlayerArray() )
-		Remote_CallFunction_Replay( player, "ServerCallback_TrackBatteryLocations", o.x, o.y, o.z, true )
+	Remote_CallFunction_Replay( player, "ServerCallback_TrackBatteryLocations", o.x, o.y, o.z, true )
 
 	wait 3.0
-	foreach( p in GetPlayerArray() )
-		Remote_CallFunction_Replay( player, "ServerCallback_ClearBatteryLocations", false, realDelay )
+	Remote_CallFunction_Replay( player, "ServerCallback_ClearBatteryLocations", false, realDelay )
 
 	wait realDelay
 }

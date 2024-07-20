@@ -14,6 +14,20 @@ void function CoopCustomPrecache()
 	RegisterSignal( "CleanupFXAndSoundsForDecoy" ) // holo works in sp :poggies:
 
 	RegisterOnscreenHint( "coop_checkpoint", "Checkpoint Reached" )
+	
+	PrecacheModel( $"models/titans/medium/titan_medium_ajax.mdl" )
+	PrecacheModel( $"models/titans/medium/titan_medium_wraith.mdl" )
+	PrecacheModel( $"models/titans/heavy/titan_heavy_deadbolt.mdl" )
+	PrecacheModel( $"models/titans/heavy/titan_heavy_ogre.mdl" )
+	PrecacheModel( $"models/titans/light/titan_light_raptor.mdl" )
+	PrecacheModel( $"models/titans/light/titan_light_locust.mdl" )
+	
+	PrecacheModel( $"models/weapons/arms/pov_titan_medium_ajax.mdl" )
+	PrecacheModel( $"models/weapons/arms/pov_titan_medium_wraith.mdl" )
+	PrecacheModel( $"models/weapons/arms/pov_titan_heavy_deadbolt.mdl" )
+	PrecacheModel( $"models/weapons/arms/pov_titan_heavy_ogre.mdl" )
+	PrecacheModel( $"models/weapons/arms/pov_titan_light_locust.mdl" )
+	PrecacheModel( $"models/weapons/arms/pov_titan_light_raptor.mdl" )
 
 #if CLIENT
 	ClTitanAtlas_Init( $"models/titans/medium/titan_medium_ajax.mdl" )

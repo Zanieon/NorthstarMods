@@ -217,7 +217,10 @@ void function SpPlayerConnecting( entity player )
 	entity start = GetEnt( "info_player_start" )
 	player.SetOrigin( start.GetOrigin() )
 	player.SetAngles( start.GetAngles() )
-	
+}
+
+void function SpPlayerConnected( entity player )
+{
 	if ( IsValid( file.spPetTitanStart ) && !IsValid( file.protagonist ) )
 	{
 		CreatePetTitan( player )
@@ -227,10 +230,6 @@ void function SpPlayerConnecting( entity player )
 		
 		file.protagonist = player
 	}
-}
-
-void function SpPlayerConnected( entity player )
-{
 	thread SpPlayerConnected_Thread( player )
 }
 
@@ -322,7 +321,7 @@ void function TrackPlayerLastSlideTime( entity player )
 	}
 }
 
-void function CreatePetTitan( entity player)
+void function CreatePetTitan( entity player )
 {
 	Assert( IsValid( file.spPetTitanStart ) )
 	// Player is in his Titan, don't create a titan
@@ -415,12 +414,11 @@ void function CreatePetTitanAtOrigin( entity player, vector origin, vector angle
 	}
 	else if( GetPreferredTitanForPlayer( player ).tolower() != "none" )
 	{
-		entity ornull npc = PickRandomTitanForPlayer( player, origin, angles )
+		entity npc = expect entity( PickRandomTitanForPlayer( player, origin, angles ) )
 		
 		if( !IsValid( npc ) )
 			return
 		
-		expect entity( npc )
 		player.SetPetTitan( npc )
 		npc.SetOwner( player )
 		npc.SetBossPlayer( player )
@@ -450,7 +448,6 @@ entity ornull function PickRandomTitanForPlayer( entity player, vector origin, v
 		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
 		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
 		SetSpawnOption_OwnerPlayer( npc, player )
-		SetSpawnOption_SquadName( npc, "bt" )
 		DispatchSpawn( npc )
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_ion"
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -468,7 +465,6 @@ entity ornull function PickRandomTitanForPlayer( entity player, vector origin, v
 		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
 		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
 		SetSpawnOption_OwnerPlayer( npc, player )
-		SetSpawnOption_SquadName( npc, "bt" )
 		DispatchSpawn( npc )
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_scorch_prime"
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -487,7 +483,6 @@ entity ornull function PickRandomTitanForPlayer( entity player, vector origin, v
 		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
 		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
 		SetSpawnOption_OwnerPlayer( npc, player )
-		SetSpawnOption_SquadName( npc, "bt" )
 		DispatchSpawn( npc )
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_northstar"
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -502,7 +497,6 @@ entity ornull function PickRandomTitanForPlayer( entity player, vector origin, v
 		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
 		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
 		SetSpawnOption_OwnerPlayer( npc, player )
-		SetSpawnOption_SquadName( npc, "bt" )
 		DispatchSpawn( npc )
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_ronin"
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -521,7 +515,6 @@ entity ornull function PickRandomTitanForPlayer( entity player, vector origin, v
 		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
 		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
 		SetSpawnOption_OwnerPlayer( npc, player )
-		SetSpawnOption_SquadName( npc, "bt" )
 		DispatchSpawn( npc )
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_tone"
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -540,7 +533,6 @@ entity ornull function PickRandomTitanForPlayer( entity player, vector origin, v
 		SetSpawnOption_TitanSoulPassive1( npc, "pas_vanguard_doom" )
 		SetSpawnOption_TitanSoulPassive2( npc, "pas_enhanced_titan_ai" )
 		SetSpawnOption_OwnerPlayer( npc, player )
-		SetSpawnOption_SquadName( npc, "bt" )
 		DispatchSpawn( npc )
 		npc.GetTitanSoul().soul.titanLoadout.titanExecution = "execution_legion_prime"
 		array<entity> primaryWeapons = npc.GetMainWeapons()
@@ -560,6 +552,7 @@ entity ornull function PickRandomTitanForPlayer( entity player, vector origin, v
 	if( IsValid( npc ) )
 	{
 		DisableTitanRodeo( npc )
+		npc.SetHealthPerSegment( 2500 )
 		npc.kv.alwaysAlert = true
 		npc.SetUsePrompts( "#HOLD_TO_EMBARK", "#PRESS_TO_EMBARK" )
 		ShowName( npc )

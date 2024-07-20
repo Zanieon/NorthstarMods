@@ -8,12 +8,36 @@
 	"ConVars": [
 		{
 			"Name": "coop_enemyTitanHealthScale",
-			"DefaultValue": "1"
+			"DefaultValue": "2"
 		},
 		{
 			"Name": "coop_preferredtitan",
 			"DefaultValue": "none",
 			"Flags": "ARCHIVE_PLAYERPROFILE"
+		}, //All this shit below is just so that dedicated servers requires it
+		{
+			"Name": "dof_enable",
+			"DefaultValue": ""
+		},
+		{
+			"Name": "m_invert_pitch",
+			"DefaultValue": ""
+		},
+		{
+			"Name": "joy_inverty",
+			"DefaultValue": ""
+		},
+		{
+			"Name": "autosprint_type",
+			"DefaultValue": "1"
+		},
+		{
+			"Name": "joy_movement_stick",
+			"DefaultValue": ""
+		},
+		{
+			"Name": "hud_setting_showTips",
+			"DefaultValue": ""
 		}
 	],
 	"Scripts": [

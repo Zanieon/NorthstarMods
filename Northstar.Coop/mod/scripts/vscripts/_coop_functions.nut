@@ -11,7 +11,7 @@ global function GetPreferredTitanForPlayer
 global function Coop_LoadMapFromStartPoint
 global function Coop_ReloadCurrentMapFromLatestStartPoint
 global function Coop_SyncCutsceneToProtagonist
-global function Coop_CleatCutsceneFromProtagonist
+global function Coop_ClearCutsceneFromProtagonist
 global function Coop_CheckIfIsCutscenePlaying
 #endif
 
