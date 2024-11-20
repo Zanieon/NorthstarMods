@@ -52,6 +52,9 @@ void function LaserCore_OnPlayedOrNPCKilled( entity victim, entity attacker, var
 	entity soul = attacker.GetTitanSoul()
 	if ( !IsValid( soul ) )
 		return
+	//Defensive fix for sometimes npc could delay dead (like nuke titan)
+	if ( soul.GetCoreChargeExpireTime() <= Time() )
+		return
 
 	entity weapon = attacker.GetOffhandWeapon( OFFHAND_EQUIPMENT )
 	if ( !weapon.HasMod( "fd_laser_cannon" ) )
