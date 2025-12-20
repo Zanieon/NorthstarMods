@@ -162,18 +162,27 @@ playlists
 			vars
 			{
 				name #GAMEMODE_ctf_comp
-				lobbytitle #PL_capture_the_flag_lobby
-				description #PL_capture_the_flag_desc
 				hint #PL_capture_the_flag_hint
 				abbreviation #PL_capture_the_flag_abbr
 				image ctf
-				respawn_delay 8
-				scorelimit 5
+				respawn_delay 7
+				scorelimit 6
 				suddendeath_timelimit 2
-				timelimit 12
-				max_players 10
+				timelimit 14
+				max_players 12
 				phase_shift_drop_flag 1
 				ctf_flag_return_time 1
+				ctf_flag_instant_return_in_triggers 1
+				pilot_health_multiplier 1.2
+				boosts_enabled 1
+				titan_spawn_deploy_enabled 0
+				earn_meter_pilot_overdrive 0
+				earn_meter_pilot_multiplier 0.5
+				earn_meter_titan_multiplier 0.5
+				enable_sun_flare_mp_angel_city 0
+				instant_respawn_as_titan 1
+				run_epilogue 0
+				
 				color		"0 119 245 255"
 
 				gamemode_score_hint #GAMEMODE_SCORE_HINT_CTF
@@ -603,19 +612,6 @@ playlists
 				mixtape_slot 4
 				mixtape_timeout 120
 				visible 1
-				
-				// comp-exclusive settings
-				// note: these don't display right on the private match menu yet
-				pilot_health_multiplier 1.25
-				respawn_delay 7.0
-				
-				boosts_enabled 1 // this is actually disabled lol
-				earn_meter_pilot_overdrive 0
-				earn_meter_pilot_multiplier 0.5
-				earn_meter_titan_multiplier 0.5
-				
-				scorelimit 6
-				timelimit 14
 			}
 			gamemodes
 			{
