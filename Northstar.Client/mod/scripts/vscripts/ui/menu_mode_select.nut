@@ -20,14 +20,7 @@ global enum eModeMenuModeCategory
 #if VANILLA
 const array<string> blockedModes = []
 #else
-const array<string> blockedModes =
-[
-	"fd_easy",
-	"fd_normal",
-	"fd_hard",
-	"fd_master",
-	"fd_insane"
-]
+const array<string> blockedModes = []
 #endif
 
 struct ListEntry_t {
