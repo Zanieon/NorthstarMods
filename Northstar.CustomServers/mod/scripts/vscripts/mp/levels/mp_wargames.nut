@@ -26,9 +26,15 @@ void function CodeCallback_MapInit()
 	AddSpawnCallback( "info_spawnpoint_marvin", AddMarvinSpawner )
 	AddCallback_GameStateEnter( eGameState.Prematch, SpawnMarvinsForRound )
 	
-	// currently disabled until finished: intro
-	if ( !IsFFAGame() )
-		ClassicMP_SetLevelIntro( WargamesIntroSetup, 20.0 )
+	// Load Frontier Defense Data
+	if( GameRules_GetGameMode() == FD )
+		initFrontierDefenseData()
+	else
+	{
+		// currently disabled until finished: intro
+		if ( !IsFFAGame() && GetClassicMPMode() )
+			ClassicMP_SetLevelIntro( WargamesIntroSetup, 20.0 )
+	}
 }
 
 void function AddEvacNodes()
@@ -44,31 +50,11 @@ void function AddEvacNodes()
 // dissolve effects
 void function WargamesDissolveDeadEntity( entity deadEnt, var damageInfo )
 {
-	if ( deadEnt.IsPlayer() || GamePlayingOrSuddenDeath() || GetGameState() == eGameState.Epilogue )
-	{
-		deadEnt.Dissolve( ENTITY_DISSOLVE_CHAR, < 0, 0, 0 >, 0 )
-		EmitSoundAtPosition( TEAM_UNASSIGNED, deadEnt.GetOrigin(), "Object_Dissolve" )
-		
-		if ( deadEnt.IsPlayer() )
-			thread EnsureWargamesDeathEffectIsClearedForPlayer( deadEnt )
-	}
-}
-
-void function EnsureWargamesDeathEffectIsClearedForPlayer( entity player )
-{
-	// this is slightly shit but whatever lol
-	player.EndSignal( "OnDestroy" )
-	
-	float startTime = Time()
-	while ( player.kv.VisibilityFlags != "0" )
-	{
-		if ( Time() > startTime + 4.0 ) // if we wait too long, just ignore
-			return
-	
-		WaitFrame() 
-	}
-	
-	player.kv.VisibilityFlags = ENTITY_VISIBLE_TO_EVERYONE
+	EmitSoundAtPosition( TEAM_UNASSIGNED, deadEnt.GetOrigin(), "Object_Dissolve" )
+	if ( deadEnt.IsPlayer() )
+		deadEnt.DissolveNonLethal( ENTITY_DISSOLVE_CHAR, < 0, 0, 0 >, 500 )
+	else
+		deadEnt.Dissolve( ENTITY_DISSOLVE_CHAR, < 0, 0, 0 >, 500 )
 }
 
 void function AddMarvinSpawner( entity spawn )
@@ -120,6 +106,10 @@ void function WargamesIntro_AddPlayer( entity player )
 
 void function OnPrematchStart()
 {
+	array<entity> triggers = GetEntArrayByClass_Expensive( "trigger_hurt" ) // Disable temporarily for intro
+	foreach ( entity trigger in triggers )
+		trigger.kv.triggerFilterPlayer = "none"
+	
 	ClassicMP_OnIntroStarted()
 	file.introStartTime = Time()
 	
@@ -247,6 +237,9 @@ void function OnPrematchStart()
 		if ( IsValid(ent) )
 			ent.Destroy()
 	}
+	
+	foreach ( entity trigger in triggers )
+		trigger.kv.triggerFilterPlayer = "all"
 }
 
 void function PlayerWatchesWargamesIntro( entity player )
