@@ -243,10 +243,12 @@ void function AddArmBadgeToTitan_Internal( entity soul )
 	expect asset( model )
 
 	entity soulOwner = soul.GetBossPlayer()
-	if ( !IsValid( soulOwner ) )
+	if ( !IsValid( soulOwner ) || model == null )
 		return
 
 	entity armBadge = CreatePropDynamic( model )
+	if ( !IsValid( armBadge ) )
+		return
 
 	//string titanType = GetSoulTitanSubClass( soul )
 
